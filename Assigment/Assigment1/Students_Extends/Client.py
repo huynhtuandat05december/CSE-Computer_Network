@@ -6,6 +6,7 @@ import threading
 import sys
 import traceback
 import os
+import time
 
 from RtpPacket import RtpPacket
 
@@ -274,7 +275,7 @@ class Client:
                       str(self.sessionId) + CACHE_FILE_EXT)
         except:
             pass
-        # time.sleep(1)
+        time.sleep(1)
         self.state = self.INIT
         self.rtspSeq = 0
         self.sessionId = 0
