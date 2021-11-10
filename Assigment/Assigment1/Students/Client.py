@@ -15,6 +15,9 @@ CACHE_FILE_NAME = "cache-"
 CACHE_FILE_EXT = ".jpg"
 
 
+FILE_NAME = "SDF-"
+FILE_EXT = ".txt"
+
 class Client:
     INIT = 0
     READY = 1
@@ -25,6 +28,7 @@ class Client:
     PLAY = 1
     PAUSE = 2
     TEARDOWN = 3
+    DESCRIBE = 4
 
     # Initiation..
     def __init__(self, master, serveraddr, serverport, rtpport, filename):
@@ -76,15 +80,25 @@ class Client:
         self.teardown["command"] = self.exitClient
         self.teardown.grid(row=1, column=3, padx=2, pady=2)
 
+        # Create Describe button
+        self.describe = Button(self.master, width = 20, padx = 3, pady = 3)
+        self.describe["text"] = "Descrbie"
+        self.describe["command"] = self.describeStream
+        self.describe.grid(row = 1, column = 4, padx=2, pady=2)
+
         # Create a label to display the movie
         self.label = Label(self.master, height=19)
         self.label.grid(row=0, column=0, columnspan=4,
                         sticky=W+E+N+S, padx=5, pady=5)
+    def describeStream(self):
+        """Describe button handler"""
+        self.sendRtspRequest(self.DESCRIBE)
 
     def setupMovie(self):
         """Setup button handler."""
         if self.state == self.INIT:
             self.sendRtspRequest(self.SETUP)
+        self.sessionStartTime = time()
     # TODO
 
     def exitClient(self):
@@ -207,8 +221,24 @@ class Client:
             request = 'TEARDOWN ' + self.fileName + ' RTSP/1.0\nCSeq: ' + \
                 str(self.rtspSeq) + '\nSession: ' + str(self.sessionId)
             self.requestSent = self.TEARDOWN
-        else:
+
+        elif requestCode == self.DESCRIBE and not self.state == self.PLAYING:
+            self.rtspSeq = self.rtspSeq + 1
+
+            request = ( "DESCRIBE " + str(self.fileName) + " RTSP/1.0" + "\n"
+                        "CSeq: " + str(self.rtspSeq) + "\n"
+                        "session " + str(self.sessionId) + "\n"
+                        "session_starttime " + str(self.sessionStartTime) + "\n"
+                        "encodings " + "rtpFormat" + "\n"
+                        "server_addr " + str(self.serverAddr) + '\n'
+                        "server_port " + str(self.serverPort) + '\n'
+                        "client_port " + str(self.rtpPort)
+                      )
+            # Keep track of the sent request.
+            self.requestSent = self.DESCRIBE
+        else :
             return
+
 
             # Send the RTSP request using rtspSocket.
         self.rtspSocket.send(request.encode())
@@ -221,7 +251,7 @@ class Client:
             reply = self.rtspSocket.recv(1024)
 
             if reply:
-                self.parseRtspReply(reply.decode())
+                self.parseRtspReply(reply.decode("utf-8"))
 
                 # Close the RTSP socket upon requesting Teardown
             if self.requestSent == self.TEARDOWN:
@@ -257,6 +287,20 @@ class Client:
                         self.state = self.INIT
                         # Flag the teardownAcked to close the socket.
                         self.teardownAcked = 1
+                    elif self.requestSent == self.DESCRIBE:
+                        while True:
+                            data = self.rtspSocket.recv(1024)
+                            if data:
+                                recv = data.decode("utf-8")
+                                lines = recv.split("\n")
+                                line2 = lines[1].split(' ')
+                                filename = FILE_NAME + str(self.sessionId) + FILE_EXT
+                                file = open(filename, "wb")
+                                file.write(data)
+                                file.close()
+                                break
+                    else :
+                        return
 
     def openRtpPort(self):
         """Open RTP socket binded to a specified port."""

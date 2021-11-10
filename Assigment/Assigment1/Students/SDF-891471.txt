@@ -1,0 +1,8 @@
+type_of_stream RTSP
+version 1.0
+session_id 891471
+session_starttime 1636563495.2995224
+pkt_encoding rtpFormat
+server_addr localhost
+server_port 3000
+client_port 5000
