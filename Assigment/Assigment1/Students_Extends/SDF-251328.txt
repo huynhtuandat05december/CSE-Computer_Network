@@ -1,0 +1,8 @@
+type_of_stream RTSP
+version 1.0
+session_id 251328
+session_starttime Thu
+pkt_encoding rtpFormat
+server_addr localhost
+server_port 3001
+client_port 5000

@@ -15,6 +15,9 @@ from RtpPacket import RtpPacket
 CACHE_FILE_NAME = "cache-"
 CACHE_FILE_EXT = ".jpg"
 
+FILE_NAME = "SDF-"
+FILE_EXT = ".txt"
+
 
 class Client:
     INIT = 0
@@ -277,6 +280,21 @@ class Client:
                         self.state = self.INIT
                         # Flag the teardownAcked to close the socket.
                         self.teardownAcked = 1
+                    elif self.requestSent == self.DESCRIBE:
+                        while True:
+                            data = self.rtspSocket.recv(1024)
+                            if data:
+                                recv = data.decode("utf-8")
+                                lines = recv.split("\n")
+                                line2 = lines[1].split(' ')
+                                filename = FILE_NAME + \
+                                    str(self.sessionId) + FILE_EXT
+                                file = open(filename, "wb")
+                                file.write(data)
+                                file.close()
+                                break
+                    else:
+                        return
 
     def openRtpPort(self):
         """Open RTP socket binded to a specified port."""
