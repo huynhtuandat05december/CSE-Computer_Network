@@ -6,7 +6,9 @@ import threading
 import sys
 import traceback
 import os
+# from time import time
 import time
+
 
 from RtpPacket import RtpPacket
 
@@ -24,6 +26,7 @@ class Client:
     PLAY = 1
     PAUSE = 2
     TEARDOWN = 3
+    DESCRIBE = 4
 
     # Initiation..
     def __init__(self, master, serveraddr, serverport, rtpport, filename):
@@ -41,6 +44,14 @@ class Client:
         self.connectToServer()
         self.frameNbr = 0
         self.setupMovie()
+
+        self.sessionStartTime = time.ctime()
+        self.sumOfDeltaTime = 0
+        self.totalLen = 0
+        self.startTime = 0
+        self.endTime = 0
+        self.numLostPackets = 0
+        self.numSentPackets = 0
 
     # THIS GUI IS JUST FOR REFERENCE ONLY, STUDENTS HAVE TO CREATE THEIR OWN GUI
     def createWidgets(self):
@@ -69,10 +80,19 @@ class Client:
         self.teardown["command"] = self.reset
         self.teardown.grid(row=1, column=3, padx=2, pady=2)
 
+        self.describe = Button(self.master, width=20, padx=3, pady=3)
+        self.describe["text"] = "Descrbie"
+        self.describe["command"] = self.describeStream
+        self.describe.grid(row=1, column=4, padx=2, pady=2)
+
         # Create a label to display the movie
         self.label = Label(self.master, height=19)
         self.label.grid(row=0, column=0, columnspan=4,
                         sticky=W+E+N+S, padx=5, pady=5)
+
+    def describeStream(self):
+        """Describe button handler"""
+        self.sendRtspRequest(self.DESCRIBE)
 
     def setupMovie(self):
         """Setup button handler."""
@@ -192,6 +212,21 @@ class Client:
             request = 'TEARDOWN ' + self.fileName + ' RTSP/1.0\nCSeq: ' + \
                 str(self.rtspSeq) + '\nSession: ' + str(self.sessionId)
             self.requestSent = self.TEARDOWN
+        elif requestCode == self.DESCRIBE and not self.state == self.PLAYING:
+            self.rtspSeq = self.rtspSeq + 1
+
+            request = ("DESCRIBE " + str(self.fileName) + " RTSP/1.0" + "\n"
+                       "CSeq: " + str(self.rtspSeq) + "\n"
+                       "session " + str(self.sessionId) + "\n"
+                       "session_starttime " +
+                       str(self.sessionStartTime) + "\n"
+                       "encodings " + "rtpFormat" + "\n"
+                       "server_addr " + str(self.serverAddr) + '\n'
+                       "server_port " + str(self.serverPort) + '\n'
+                       "client_port " + str(self.rtpPort)
+                       )
+            # Keep track of the sent request.
+            self.requestSent = self.DESCRIBE
         else:
             return
 
